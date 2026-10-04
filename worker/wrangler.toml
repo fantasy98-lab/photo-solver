@@ -7,7 +7,7 @@ preview_urls = false
 [vars]
 # 許可するオリジン。GitHub Pages公開後は "https://<ユーザー名>.github.io" に変更する
 # （カンマ区切りで複数指定可）。"*" はどこからでも許可。
-ALLOWED_ORIGIN = "*"
+ALLOWED_ORIGIN = "https://fantasy98-lab.github.io"
 
 # APP_PASSWORD と ANTHROPIC_API_KEY はここに書かない。
 # ローカル: .dev.vars に書く / 本番: `npx wrangler secret put <名前>` で登録する
