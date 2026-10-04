@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>写真で解説</title>
+<!-- iPhone のホーム画面に追加したとき、アプリのように全画面で開く設定 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="写真で解説">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1b1b1d" media="(prefers-color-scheme: dark)">
+<style>
+  /* 色はここでまとめて決める（下はダークモード用） */
+  :root {
+    --bg: #f6f5f2;
+    --card: #ffffff;
+    --text: #1f1f22;
+    --muted: #6b6b73;
+    --line: #e2e0da;
+    --accent: #2f5bd3;
+    --accent-text: #ffffff;
+    --ok-bg: #e7f5ec;
+    --ok-line: #2e9e5b;
+    --ok-text: #1d6b3d;
+    --warn-bg: #fff4e0;
+    --warn-line: #d48a12;
+    --err-bg: #fdeceb;
+    --err-line: #d2463c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1b1d;
+      --card: #26262a;
+      --text: #ececef;
+      --muted: #a0a0aa;
+      --line: #3a3a40;
+      --accent: #6f8ff0;
+      --accent-text: #0f1220;
+      --ok-bg: #173323;
+      --ok-line: #4cc37f;
+      --ok-text: #8fe0b1;
+      --warn-bg: #3a2c12;
+      --warn-line: #e3a640;
+      --err-bg: #3d1d1b;
+      --err-line: #f07468;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  /* iPhone の切り欠きやホームバーに文字がかぶらないよう余白を取る */
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
+             calc(32px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+  }
+  h1 { font-size: 22px; margin: 4px 0 16px; }
+  h2 { font-size: 14px; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .hidden { display: none !important; }
+  .pre { white-space: pre-wrap; word-break: break-word; margin: 0; }
+
+  input[type="password"] {
+    flex: 1;
+    min-width: 0;
+    font-size: 16px; /* 16px 未満だと iPhone が勝手に拡大するため */
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+  }
+  button {
+    font: inherit;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 16px;
+    background: var(--accent);
+    color: var(--accent-text);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--line);
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  button:disabled { opacity: 0.55; cursor: default; }
+  #shoot {
+    width: 100%;
+    padding: 18px;
+    font-size: 18px;
+    border-radius: 14px;
+  }
+
+  #preview {
+    display: block;
+    max-width: 100%;
+    max-height: 220px;
+    margin: 0 auto 14px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+  }
+
+  .message { border-left-width: 4px; }
+  .message.warn { background: var(--warn-bg); border-color: var(--warn-line); }
+  .message.error { background: var(--err-bg); border-color: var(--err-line); }
+
+  /* 正解はいちばん目立たせる */
+  .answer {
+    background: var(--ok-bg);
+    border: 2px solid var(--ok-line);
+  }
+  .answer h2 { color: var(--ok-text); }
+  .answer .pre { font-size: 20px; font-weight: 700; color: var(--ok-text); }
+
+  .choices { list-style: none; margin: 0; padding: 0; }
+  .choice {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 10px;
+  }
+  .choice.correct { background: var(--ok-bg); border: 2px solid var(--ok-line); }
+  .choice-head { display: flex; gap: 8px; align-items: baseline; font-weight: 600; }
+  .badge {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+  }
+  .choice.correct .badge { background: var(--ok-line); border-color: var(--ok-line); color: #fff; }
+  .choice-expl { margin-top: 6px; font-size: 15px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>写真で解説</h1>
+
+  <!-- 合言葉の入力欄（保存済みなら隠す） -->
+  <form id="password-form" class="card hidden">
+    <h2>合言葉</h2>
+    <div class="row">
+      <input id="password" type="password" autocomplete="current-password" placeholder="合言葉を入力" required>
+      <button type="submit">保存</button>
+    </div>
+    <p class="muted" style="margin:8px 0 0">このスマホにだけ保存され、次回からは入力不要です。</p>
+  </form>
+
+  <!-- 合言葉が保存済みのときに出す表示 -->
+  <div id="password-saved" class="row hidden" style="justify-content:space-between;margin-bottom:14px">
+    <span class="muted">合言葉は保存済みです</span>
+    <button id="change-password" type="button" class="secondary">合言葉を変更</button>
+  </div>
+
+  <!-- 撮影ボタン。本物のファイル選択欄は隠し、ボタンから呼び出す -->
+  <button id="shoot" type="button">撮影する／写真を選ぶ</button>
+  <input id="file" type="file" accept="image/*" class="hidden">
+  <p class="muted" style="text-align:center;margin:8px 0 18px">問題全体が写るように、明るい場所で撮ってください</p>
+
+  <img id="preview" class="hidden" alt="送信した写真">
+  <div id="message" class="card message hidden"><p class="pre" id="message-text"></p></div>
+  <div id="result"></div>
+</main>
+
+<script>
+  // 送信先（Cloudflare Worker）
+  const API_URL = "https://photo-solver.fantasy98-lab.workers.dev";
+
+  // 送信前に縮小するときの長辺の最大ピクセル数と、base64文字数の上限
+  // （Worker側の上限は約7,000,000文字。余裕を持たせて小さめにする）
+  const MAX_SIDE = 1600;
+  const MAX_BASE64_LENGTH = 4_000_000;
+
+  // 返事が来ないときに諦めるまでの時間（ミリ秒）
+  const TIMEOUT_MS = 120_000;
+
+  const STORAGE_KEY = "photo-solver-password";
+
+  const $ = (id) => document.getElementById(id);
+  const passwordForm = $("password-form");
+  const passwordInput = $("password");
+  const passwordSaved = $("password-saved");
+  const shootButton = $("shoot");
+  const fileInput = $("file");
+  const preview = $("preview");
+  const resultArea = $("result");
+
+  // ---- 合言葉の保存・読み出し ----
+  // プライベートブラウズ等で保存できない環境でも止まらないよう try で囲む
+  function loadPassword() {
+    try { return localStorage.getItem(STORAGE_KEY) || ""; } catch { return ""; }
+  }
+  function savePassword(value) {
+    try { localStorage.setItem(STORAGE_KEY, value); } catch {}
+  }
+
+  // 保存の有無に合わせて、入力欄と「保存済み」表示を切り替える
+  let password = loadPassword();
+  function showPasswordState(forceInput = false) {
+    const needInput = forceInput || !password;
+    passwordForm.classList.toggle("hidden", !needInput);
+    passwordSaved.classList.toggle("hidden", needInput);
+    if (needInput) passwordInput.value = "";
+  }
+  showPasswordState();
+
+  passwordForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const value = passwordInput.value.trim();
+    if (!value) return;
+    password = value;
+    savePassword(value);
+    showPasswordState();
+    hideMessage();
+  });
+
+  $("change-password").addEventListener("click", () => {
+    showPasswordState(true);
+    passwordInput.focus();
+  });
+
+  // ---- 撮影ボタン ----
+  shootButton.addEventListener("click", () => {
+    if (!password) {
+      showMessage("先に合言葉を入力してください。", "warn");
+      showPasswordState(true);
+      passwordInput.focus();
+      return;
+    }
+    fileInput.click();
+  });
+
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files[0];
+    fileInput.value = ""; // 同じ写真をもう一度選んでも反応するように空にしておく
+    if (!file) return;
+
+    setBusy(true);
+    hideMessage();
+    resultArea.replaceChildren();
+    try {
+      const base64 = await shrinkImage(file);
+      preview.src = "data:image/jpeg;base64," + base64;
+      preview.classList.remove("hidden");
+      await solve(base64);
+    } catch (err) {
+      showMessage(err.message || "うまくいきませんでした。もう一度お試しください。", "error");
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  // 送信中はボタンを押せなくし、文字を変える
+  function setBusy(busy) {
+    shootButton.disabled = busy;
+    shootButton.textContent = busy ? "解いています…" : "撮影する／写真を選ぶ";
+  }
+
+  // ---- 写真の縮小・圧縮 ----
+  // 長辺を MAX_SIDE 以下にして JPEG に変換し、base64文字列（"data:..." なし）を返す
+  async function shrinkImage(file) {
+    const img = await loadImage(file);
+    let side = MAX_SIDE;
+    let quality = 0.85;
+    while (true) {
+      const scale = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
+      const width = Math.round(img.naturalWidth * scale);
+      const height = Math.round(img.naturalHeight * scale);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff"; // 透明部分が黒くならないよう白で塗っておく
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const base64 = canvas.toDataURL("image/jpeg", quality).split(",")[1];
+      if (base64.length <= MAX_BASE64_LENGTH) return base64;
+
+      // まだ大きければ、画質→サイズの順に下げてやり直す
+      if (quality > 0.6) quality -= 0.1;
+      else side = Math.round(side * 0.8);
+      if (side < 400) throw new Error("写真を十分に小さくできませんでした。別の写真でお試しください。");
+    }
+  }
+
+  function loadImage(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("この写真は読み込めませんでした。JPEG・PNG の写真でお試しください。"));
+      };
+      img.src = url;
+    });
+  }
+
+  // ---- Worker に送って結果を受け取る ----
+  async function solve(base64) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    let response;
+    try {
+      response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // test.mjs と同じ形式：{ password, image, mediaType }
+        body: JSON.stringify({ password, image: base64, mediaType: "image/jpeg" }),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (err.name === "AbortError") {
+        throw new Error("時間がかかりすぎたため中断しました。もう一度お試しください。");
+      }
+      throw new Error("通信できませんでした。電波やWi-Fiの状態を確認して、もう一度お試しください。");
+    } finally {
+      clearTimeout(timer);
+    }
+
+    let data = null;
+    try { data = await response.json(); } catch {}
+
+    if (!response.ok) {
+      if (response.status === 401) showPasswordState(true);
+      throw new Error(errorMessage(response.status, data && data.error));
+    }
+    if (!data) throw new Error("回答を受け取れませんでした。もう一度お試しください。");
+    renderResult(data);
+  }
+
+  // ステータス番号ごとに、わかりやすい日本語に置き換える
+  function errorMessage(status, serverMessage) {
+    switch (status) {
+      case 401:
+        return "合言葉が違います。上の欄に正しい合言葉を入れ直してください。";
+      case 400:
+        return `写真を送れませんでした（${serverMessage || "形式の問題"}）。別の写真でお試しください。`;
+      case 422:
+        return "この写真の内容には回答できませんでした。別の問題でお試しください。";
+      case 429:
+        return "混み合っています。1分ほど待ってから、もう一度お試しください。";
+      case 502:
+        return `${serverMessage || "AIの呼び出しに失敗しました"}。少し待ってから、もう一度お試しください。`;
+      default:
+        if (status >= 500) return "サーバーでエラーが起きました。少し待ってから、もう一度お試しください。";
+        return `エラーが起きました（番号 ${status}）。もう一度お試しください。`;
+    }
+  }
+
+  // ---- 結果の表示 ----
+  // AIの回答は textContent で入れる（HTMLとして解釈させない＝安全）
+  function renderResult(data) {
+    resultArea.replaceChildren();
+
+    if (!data.readable) {
+      showMessage(
+        "写真から問題を読み取れませんでした。\n\n" +
+          (data.unreadable_reason || "明るい場所で、問題全体がはっきり写るように撮り直してください。"),
+        "warn"
+      );
+      return;
+    }
+
+    resultArea.append(
+      section("問題", data.question),
+      section("正解", data.correct_answer, "answer"),
+      section("解説", data.overall_explanation)
+    );
+
+    if (Array.isArray(data.choices) && data.choices.length > 0) {
+      const card = el("div", "card");
+      card.append(el("h2", "", "選択肢ごとの解説"));
+      const list = el("ul", "choices");
+      for (const choice of data.choices) {
+        const item = el("li", choice.is_correct ? "choice correct" : "choice");
+        const head = el("div", "choice-head");
+        head.append(
+          el("span", "badge", choice.is_correct ? "正解" : "誤り"),
+          el("span", "pre", `${choice.label}　${choice.text}`)
+        );
+        item.append(head, el("p", "pre choice-expl", choice.explanation));
+        list.append(item);
+      }
+      card.append(list);
+      resultArea.append(card);
+    }
+  }
+
+  function section(title, text, extraClass = "") {
+    const card = el("div", `card ${extraClass}`);
+    card.append(el("h2", "", title), el("p", "pre", text || ""));
+    return card;
+  }
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  // ---- お知らせ・エラーの表示 ----
+  function showMessage(text, kind) {
+    $("message-text").textContent = text;
+    $("message").className = `card message ${kind}`;
+  }
+  function hideMessage() {
+    $("message").classList.add("hidden");
+  }
+</script>
+</body>
+</html>

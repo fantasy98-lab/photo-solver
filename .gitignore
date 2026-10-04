@@ -1,0 +1,20 @@
+# 依存パッケージ（npm install で作り直せる）
+worker/node_modules/
+
+# 秘密の値（合言葉・APIキー）。見本の .dev.vars.example だけは含める
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.*
+
+# wrangler が作る作業用フォルダ
+worker/.wrangler/
+
+# テスト用画像
+worker/*.png
+worker/*.jpg
+worker/*.jpeg
+
+# Mac が自動で作るファイル
+.DS_Store

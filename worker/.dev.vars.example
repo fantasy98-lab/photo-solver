@@ -1,0 +1,4 @@
+# このファイルを .dev.vars という名前でコピーして、値を入れてください。
+# .dev.vars は .gitignore 済みなので、GitHubには上がりません。
+APP_PASSWORD=ここに合言葉
+ANTHROPIC_API_KEY=ここにAPIキー
